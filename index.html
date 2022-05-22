@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="description" content="Web Sane">
+    <meta name="author" content="vokamut">
+    <title>Web Sane</title>
+
+    <script src="./js/vue.min.js"></script>
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/fontawesome.min.css" rel="stylesheet">
+
+    <style>
+        .preview {
+            width: 100%;
+            aspect-ratio: 0.707357859532;
+            max-width: 423px;
+        }
+
+        .scan {
+            width: 100%;
+            aspect-ratio: 0.707357859532;
+            max-width: 80px;
+        }
+
+        .image {
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container" id="app">
+    <main>
+        <div class="row g-3 pt-3">
+            <div class="col-7">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="row">
+                            <div class="col-8 col-lg-8 col-xxl-3">
+                                <h3>Web Sane <i class="fa fa-refresh fa-spin" v-show="isBusy"></i></h3>
+                            </div>
+                            <div class="col-6 col-xxl-4">
+                                <select class="form-select" id="device" v-model="params.device">
+                                    <option :value="null" disabled>Устройство по умолчанию</option>
+                                    <option v-for="(name, device) in devices" :value="device">{{ name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-xxl-4">
+                                <button class="btn btn-primary" :disabled="isBusy" @click="listDevices" title="Обновить">
+                                    <span class="d-block d-sm-none"><i class="fa fa-refresh"></i></span>
+                                    <span class="d-none d-sm-block"><i class="fa fa-refresh"></i> Обновить</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="resolution" class="form-label">Разрешение</label>
+                        <select class="form-select" id="resolution" v-model="params.resolution">
+                            <option v-for="value in resolutions" :value="value">{{ value }}</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="format" class="form-label">Формат</label>
+                        <select class="form-select" id="format" v-model="params.format">
+                            <option v-for="value in formats" :value="value">{{ value }}</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="mode" class="form-label">Режим</label>
+                        <select class="form-select" id="mode" v-model="params.mode">
+                            <option v-for="(value, index) in modes" :value="index">{{ value }}</option>
+                        </select>
+                    </div>
+
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="source" class="form-label">Источник</label>
+                        <select class="form-select" id="source" v-model="params.source">
+                            <option v-for="(value, index) in sources" :value="index">{{ value }}</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="top" class="form-label">Отступ сверху (мм)</label>
+                        <input type="number" class="form-control" min="0" step="0.1" id="top" v-model="params.top">
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="left" class="form-label">Отступ слева (мм)</label>
+                        <input type="number" class="form-control" min="0" step="0.1" id="left" v-model="params.left">
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="width" class="form-label">Ширина (мм)</label>
+                        <input type="number" class="form-control" min="0" step="0.1" id="width" v-model="params.width">
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="height" class="form-label">Высота (мм)</label>
+                        <input type="number" class="form-control" min="0" step="0.1" id="height" v-model="params.height">
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="brightness" class="form-label">Яркость</label>
+                        <input type="number" class="form-control" min="-100" max="100" step="1" v-model="params.brightness">
+                        <input type="range" class="form-range" min="-100" max="100" step="1" id="brightness" v-model="params.brightness">
+                    </div>
+
+                    <div class="col-12 col-lg-6 col-xxl-3">
+                        <label for="contrast" class="form-label">Контрастность</label>
+                        <input type="number" class="form-control" min="-100" max="100" step="1" v-model="params.contrast">
+                        <input type="range" class="form-range" min="-100" max="100" step="1" id="contrast" v-model="params.contrast">
+                    </div>
+
+                    <div class="col-12">
+                        <button class="btn btn-danger mt-2" :disabled="!isPreview && !isScan" @click="cancel" title="Отмена">
+                            <span class="d-block d-sm-none"><i class="fa fa-ban"></i></span>
+                            <span class="d-none d-sm-block"><i class="fa fa-ban"></i> Отмена</span>
+                        </button>
+                        <button class="btn btn-secondary mt-2" @click="setDefault" title="По умолчанию">
+                            <span class="d-block d-sm-none"><i class="fa fa-arrow-rotate-right"></i></span>
+                            <span class="d-none d-sm-block"><i class="fa fa-arrow-rotate-right"></i> По умолчанию</span>
+                        </button>
+                        <button class="btn btn-success mt-2" :disabled="isBusy" @click="preview" title="Предпросмотр">
+                            <span class="d-block d-sm-none"><i class="fa fa-magnifying-glass"></i></span>
+                            <span class="d-none d-sm-block"><i class="fa fa-magnifying-glass"></i> Предпросмотр</span>
+                        </button>
+                        <button class="btn btn-primary mt-2" :disabled="isBusy" @click="scan" title="Сканировать">
+                            <span class="d-block d-sm-none"><i class="fa fa-camera"></i></span>
+                            <span class="d-none d-sm-block"><i class="fa fa-camera"></i> Сканировать</span>
+                        </button>
+                        <button class="btn btn-secondary mt-2" @click="settings" title="Настройки">
+                            <span class="d-block d-sm-none"><i class="fa fa-gears"></i></span>
+                            <span class="d-none d-sm-block"><i class="fa fa-gears"></i> Настройки</span>
+                        </button>
+                    </div>
+
+                    <div class="col-12" v-show="showSettings">
+                        <div class="mb-3 form-check">
+                            <input v-model="saveSettings" type="checkbox" class="form-check-input" id="save_settings">
+                            <label class="form-check-label" for="save_settings">Сохранять настройки сканирования в браузере</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 d-none d-lg-block">
+                        <div class="row">
+                            <div class="col-3 scan" v-for="scan in scans">
+                                <a :download="scan.filename" :href="scan.src" :title="'Скачать ' + scan.filename">
+                                    <img :src="scan.src" :alt="'Скачать ' + scan.filename" class="image">
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 my-3 pt-3 text-muted text-small">
+                        <ul class="list-inline">
+                            <li class="list-inline-item">
+                                <a href="https://github.com/vokamut/websane" target="_blank">GitHub</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-5">
+                <div class="row">
+                    <div class="col-12">
+                        <h4 class="d-flex justify-content-between align-items-center mb-3">
+                            Preview
+                            <template v-if="isPreview || isScan">
+                                {{ progress}}%
+                            </template>
+                        </h4>
+                        <div class="card p-2 preview">
+                            <img v-if="previewSrc !== null" :src="previewSrc" class="image" alt="Preview">
+                        </div>
+                    </div>
+                    <div class="col-12 pt-3 d-block d-lg-none">
+                        <div class="row">
+                            <div class="col-3 scan" v-for="scan in scans">
+                                <a :download="scan.filename" :href="scan.src" :title="'Скачать ' + scan.filename">
+                                    <img :src="scan.src" :alt="'Скачать ' + scan.filename" class="image">
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="./js/bootstrap.bundle.min.js"></script>
+<script src="./js/axios.min.js"></script>
+<script type="application/javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            isBusy: false,
+            isPreview: false,
+            isScan: false,
+
+            logFile: null,
+            progress: 0.0,
+
+            previewSrc: null,
+            scans: [],
+
+            devices: [],
+            resolutions: [
+                75,
+                100,
+                150,
+                300,
+                600,
+                1200,
+                2400,
+                4800,
+            ],
+            modes: {
+                Gray: 'Черно-белое',
+                Color: 'Цветное',
+            },
+            formats: [
+                'jpeg',
+                'png',
+                'pnm',
+                'tiff'
+            ],
+            sources: {
+                Flatbed: 'Планшетный',
+            },
+
+            params: {
+                device: null,
+                resolution: 300,
+                mode: 'Gray',
+
+                top: 0,
+                left: 0,
+
+                width: 216.7,
+                height: 297.5,
+
+                brightness: 0,
+                contrast: 0,
+
+                format: 'jpeg',
+                source: 'Flatbed',
+            },
+
+            defaults: {},
+
+            showSettings: false,
+            saveSettings: false,
+        },
+        watch: {
+            saveSettings(saveSettings) {
+                if (saveSettings) {
+                    localStorage.setItem('settings', JSON.stringify(this.params));
+                } else {
+                    localStorage.removeItem('settings');
+                }
+            },
+            params: {
+                handler(params) {
+                    if (this.saveSettings) {
+                        localStorage.setItem('settings', JSON.stringify(params));
+                    }
+                },
+                deep: true
+            }
+        },
+        mounted() {
+          this.defaults = this.params;
+          this.defineParams();
+        },
+        methods: {
+            cancel() {
+                axios.post('/?cancel', { logFile: this.logFile })
+                    .then(() => {
+                        this.isBusy = false;
+                        this.isPreview = false;
+                        this.isScan = false;
+                    });
+            },
+            checkProgress() {
+                if (!this.isBusy) {
+                    return;
+                }
+
+                axios.post('/?checkProgress', { logFile: this.logFile })
+                    .then((response) => {
+                        if (response.data.status) {
+                            this.progress = response.data.progress;
+
+                            if (this.progress === 100.0) {
+                                this.getImage();
+                            } else {
+                                setTimeout(this.checkProgress, 100)
+                            }
+                        }
+                    });
+            },
+            getImage() {
+                axios.post('/?getImage', { logFile: this.logFile })
+                    .then((response) => {
+                        if (response.data.status) {
+                            this.previewSrc = response.data.src;
+
+                            if (this.isScan) {
+                                this.scans.push({
+                                    filename: response.data.filename,
+                                    src: response.data.src,
+                                })
+                            }
+                        }
+                    })
+                    .finally(() => {
+                        this.isBusy = false;
+                        this.isPreview = false;
+                        this.isScan = false;
+                    });
+            },
+            preview() {
+                this.previewSrc = null;
+                this.isBusy = true;
+                this.isPreview = true;
+                this.progress = 0.0;
+
+                axios.post('/?preview', this.params)
+                    .then((response) => {
+                        this.logFile = response.data.logFile;
+                        this.checkProgress();
+                    });
+            },
+            scan() {
+                this.previewSrc = null;
+                this.isBusy = true;
+                this.isScan = true;
+                this.progress = 0.0;
+
+                axios.post('/?scan', this.params)
+                    .then((response) => {
+                        this.logFile = response.data.logFile;
+                        this.checkProgress();
+                    });
+            },
+            listDevices() {
+                this.isBusy = true;
+
+                axios.post('/?listDevices')
+                    .then((response) => {
+                        this.devices = response.data.devices;
+
+                        if (Object.keys(this.devices).length > 0 && this.params.device === null) {
+                            this.params.device = Object.keys(this.devices)[0];
+                        }
+                    })
+                    .finally(() => {
+                        this.isBusy = false;
+                    });
+            },
+            setDefault() {
+                this.params = this.defaults;
+            },
+            settings() {
+                this.showSettings = !this.showSettings;
+            },
+            defineParams() {
+                let params = localStorage.getItem('settings');
+
+                if (params) {
+                    this.params = JSON.parse(params);
+                    this.saveSettings = true;
+                }
+            }
+        }
+    })
+</script>
+</body>
+</html>

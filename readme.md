@@ -4,6 +4,13 @@
 
 <img src=".github/interface.png" alt="Web Sane">
 
+## Требования
+
+```
+php 7.1
+scanimage (sane-utils)
+```
+
 ## Запуск
 
 ```bash

@@ -2,7 +2,7 @@
 
 Веб интерфейс для сканирования документов через Sane
 
-<img src=".github/websane_2.png" alt="Web Sane">
+<img src=".github/websane_3.png" alt="Web Sane">
 
 ## Требования
 

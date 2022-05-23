@@ -148,15 +148,15 @@ if ($isGetImage) {
 }
 
 if ($isListDevices) {
-    $command = 'scanimage -L';
+    $shell = 'scanimage -L';
 
-    $output = shell_exec($command);
+    $output = shell_exec($shell);
 
     preg_match_all('~[\'`](.+)[\'`] is a (.+)~', $output, $devicesMatches);
 
     echo json_encode([
         'status' => true,
-        'command' => $command,
+        'command' => $shell,
         'devices' => array_combine($devicesMatches[1], $devicesMatches[2]),
     ]);
 
@@ -170,6 +170,10 @@ $command = [
     '--depth ' => '8',
 ];
 
+if (random_int(0, 3) === 0) {
+    $command['--force-calibration'] = '';
+}
+
 if ($params['device'] !== null) {
     $command[] = '--device-name=' . $params['device'];
 }
@@ -182,28 +186,17 @@ $command['-x '] = $params['width'];
 $command['-y '] = $params['height'];
 
 if ($isPreview) {
-    $previewFile = $imagesDir . '/preview_' . date('Y-m-d_H:i:s') . '.jpeg';
-    $logFile = $previewFile . '.log';
-
-    $command['--output-file='] = $previewFile;
-    $command['--format='] = 'jpeg';
-    $command['--preview='] = 'yes';
-    $command['--resolution '] = '75dpi';
+    $params['format'] = 'jpeg';
+    $params['resolution'] = 75;
 }
 
-if ($isScan) {
-    $scanFile = $imagesDir . '/scan_' . date('Y-m-d_H:i:s') . '.' . $params['format'];
-    $logFile = $scanFile . '.log';
+$scanFile = $imagesDir . '/scan_' . date('Y-m-d_H:i:s') . '.' . $params['format'];
+$logFile = $scanFile . '.log';
 
-    if (random_int(0, 3) === 0) {
-        $command['--force-calibration'] = '';
-    }
-
-    $command['--output-file='] = $scanFile;
-    $command['--format='] = $params['format'];
-    $command['--preview='] = 'no';
-    $command['--resolution '] = $params['resolution'] . 'dpi';
-}
+$command['--preview='] = $isScan ? 'no' : 'yes';
+$command['--format='] = $params['format'];
+$command['--output-file='] = $scanFile;
+$command['--resolution '] = $params['resolution'] . 'dpi';
 
 $shell = '';
 

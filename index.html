@@ -16,13 +16,13 @@
     <style>
         .preview {
             width: 100%;
-            aspect-ratio: 0.707357859532;
+            aspect-ratio: 0.727583262169;
             max-width: 423px;
         }
 
         .scan {
             width: 100%;
-            aspect-ratio: 0.707357859532;
+            aspect-ratio: 0.727583262169;
             max-width: 80px;
         }
 
@@ -176,7 +176,7 @@
                                 {{ progress}}%
                             </template>
                         </h4>
-                        <div class="card p-2 preview">
+                        <div class="card preview">
                             <img v-if="previewSrc !== null" :src="previewSrc" ref="preview" class="image" alt="Preview">
                         </div>
                     </div>
@@ -283,10 +283,19 @@
                 deep: true
             },
             previewSrc(previewSrc) {
-                if (previewSrc === null) {
-                    this.cropper = null;
-                } else {
-                    this.defineCropper();
+                if (previewSrc !== null) {
+                    if (this.cropper) {
+                        this.cropper.destroy();
+                        this.cropper = null;
+                    }
+
+                    this.params.top = this.defaults.top;
+                    this.params.left = this.defaults.left;
+
+                    this.params.width = this.defaults.width;
+                    this.params.height = this.defaults.height;
+
+                    this.$nextTick(this.defineCropper);
                 }
             }
         },
@@ -394,27 +403,26 @@
                     this.saveSettings = true;
                 }
             },
-            definePreviewSizes() {
-                const preview = this.$refs.preview;
-                this.previewNaturalWidth = preview.naturalWidth;
-                this.previewNaturalHeight = preview.naturalHeight;
-            },
             defineCropper() {
-                this.definePreviewSizes()
+                this.$nextTick(() => {
+                    const preview = this.$refs.preview;
+                    this.previewNaturalWidth = preview.naturalWidth;
+                    this.previewNaturalHeight = preview.naturalHeight;
 
-                this.cropper = new Cropper(this.$refs.preview, {
-                    autoCropArea: 1,
-                    viewMode: 1,
-                    zoomOnWheel: false,
-                    toggleDragModeOnDblclick: false,
-                    crop: (event) => {
-                        this.params.width = this.decimalAdjust('round', this.defaults.width * event.detail.width / this.previewNaturalWidth, -1);
-                        this.params.height = this.decimalAdjust('round', this.defaults.height * event.detail.height / this.previewNaturalHeight, -1);
+                    this.cropper = new Cropper(preview, {
+                        autoCropArea: 1,
+                        viewMode: 1,
+                        zoomOnWheel: false,
+                        toggleDragModeOnDblclick: false,
+                        crop: (event) => {
+                            this.params.width = this.decimalAdjust('round', this.defaults.width * event.detail.width / this.previewNaturalWidth, -1);
+                            this.params.height = this.decimalAdjust('round', this.defaults.height * event.detail.height / this.previewNaturalHeight, -1);
 
-                        this.params.left = this.decimalAdjust('round', this.defaults.width * event.detail.x / this.previewNaturalWidth, -1);
-                        this.params.top = this.decimalAdjust('round', this.defaults.height * event.detail.y / this.previewNaturalHeight, -1);
-                    }
-                }, 100);
+                            this.params.left = this.decimalAdjust('round', this.defaults.width * event.detail.x / this.previewNaturalWidth, -1);
+                            this.params.top = this.decimalAdjust('round', this.defaults.height * event.detail.y / this.previewNaturalHeight, -1);
+                        }
+                    });
+                });
             },
             setCropperData(params) {
                 if (this.cropper === null) {

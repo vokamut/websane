@@ -56,20 +56,16 @@ $isCheckProgress = array_key_exists('checkProgress', $_GET);
 $isGetImage = array_key_exists('getImage', $_GET);
 $isCancel = array_key_exists('cancel', $_GET);
 
-if (!$isListDevices && !$isPreview && !$isScan && !$isCheckProgress && !$isGetImage && !$isCancel) {
-    echo json_encode([
-        'status' => false,
-    ]);
-
-    exit;
-}
-
 $params = json_decode(file_get_contents('php://input'), true);
 
 $imagesDir = __DIR__ . '/images';
 
 if (!is_dir($imagesDir) && !mkdir($imagesDir, 0755) && !is_dir($imagesDir)) {
-    throw new RuntimeException(sprintf('Directory "%s" was not created', $imagesDir));
+    echo json_encode([
+        'status' => false,
+    ]);
+
+    exit;
 }
 
 if ($isCancel) {
@@ -163,55 +159,61 @@ if ($isListDevices) {
     exit;
 }
 
-$command = [
-    'scanimage' => '',
-    '-v' => '',
-    '--progress' => '',
-    '--depth ' => '8',
-];
+if ($isScan || $isPreview) {
+    $command = [
+        'scanimage' => '',
+        '-v' => '',
+        '--progress' => '',
+        '--depth ' => '8',
+    ];
 
-if (random_int(0, 3) === 0) {
-    $command['--force-calibration'] = '';
+    if (random_int(0, 3) === 0) {
+        $command['--force-calibration'] = '';
+    }
+
+    if ($params['device'] !== null) {
+        $command[] = '--device-name=' . $params['device'];
+    }
+
+    $command['--mode '] = $params['mode'];
+    $command['--source '] = $params['source'];
+    $command['-l '] = $params['left'];
+    $command['-t '] = $params['top'];
+    $command['-x '] = $params['width'];
+    $command['-y '] = $params['height'];
+
+    if ($isPreview) {
+        $params['format'] = 'jpeg';
+        $params['resolution'] = 75;
+    }
+
+    $scanFile = $imagesDir . '/scan_' . date('Y-m-d_H:i:s') . '.' . $params['format'];
+    $logFile = $scanFile . '.log';
+
+    $command['--preview='] = $isScan ? 'no' : 'yes';
+    $command['--format='] = $params['format'];
+    $command['--output-file='] = $scanFile;
+    $command['--resolution '] = $params['resolution'] . 'dpi';
+
+    $shell = '';
+
+    foreach ($command as $key => $value) {
+        $shell .= $key . $value . ' ';
+    }
+
+    $shell .= ' 1>' . $logFile . ' 2>&1 &';
+
+    shell_exec($shell);
+
+    echo json_encode([
+        'status' => true,
+        'command' => $shell,
+        'logFile' => basename($logFile),
+    ]);
+
+    exit;
 }
-
-if ($params['device'] !== null) {
-    $command[] = '--device-name=' . $params['device'];
-}
-
-$command['--mode '] = $params['mode'];
-$command['--source '] = $params['source'];
-$command['-l '] = $params['left'];
-$command['-t '] = $params['top'];
-$command['-x '] = $params['width'];
-$command['-y '] = $params['height'];
-
-if ($isPreview) {
-    $params['format'] = 'jpeg';
-    $params['resolution'] = 75;
-}
-
-$scanFile = $imagesDir . '/scan_' . date('Y-m-d_H:i:s') . '.' . $params['format'];
-$logFile = $scanFile . '.log';
-
-$command['--preview='] = $isScan ? 'no' : 'yes';
-$command['--format='] = $params['format'];
-$command['--output-file='] = $scanFile;
-$command['--resolution '] = $params['resolution'] . 'dpi';
-
-$shell = '';
-
-foreach ($command as $key => $value) {
-    $shell .= $key . $value . ' ';
-}
-
-$shell .= ' 1>' . $logFile . ' 2>&1 &';
-
-shell_exec($shell);
 
 echo json_encode([
-    'status' => true,
-    'command' => $shell,
-    'logFile' => basename($logFile),
+    'status' => false,
 ]);
-
-exit;

@@ -1,3 +1,4 @@
 .idea
-images/
-error.log
+images/*
+!images/.gitkeep
+*.log

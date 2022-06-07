@@ -1,5 +1,9 @@
 <?php
-/** @noinspection GlobalVariableUsageInspection */
+/**
+ * @noinspection GlobalVariableUsageInspection
+ * @noinspection JsonEncodingApiUsageInspection
+ * @noinspection PhpUnusedPrivateMethodInspection
+ */
 
 declare(strict_types=1);
 
@@ -24,7 +28,7 @@ set_exception_handler(static function (Throwable $exception): void {
 function logger(string $message): void
 {
     file_put_contents(
-        __DIR__ . 'error.log',
+        __DIR__ . '/error.log',
         date('d.m.Y H:i:s') . PHP_EOL . $message . PHP_EOL . PHP_EOL,
         FILE_APPEND
     );
@@ -41,179 +45,290 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: *');
 header('Access-Control-Allow-Headers: *');
 
-if (empty($_GET)) {
-    echo json_encode([
-        'status' => false,
-    ]);
+new class {
+    private const IMAGE_DIR = __DIR__ . '/images';
 
-    exit;
-}
+    private ?string $imageFile = null;
+    private ?string $logFile = null;
 
-$isListDevices = array_key_exists('listDevices', $_GET);
-$isPreview = array_key_exists('preview', $_GET);
-$isScan = array_key_exists('scan', $_GET);
-$isCheckProgress = array_key_exists('checkProgress', $_GET);
-$isGetImage = array_key_exists('getImage', $_GET);
-$isCancel = array_key_exists('cancel', $_GET);
+    private array $params;
 
-$params = json_decode(file_get_contents('php://input'), true);
+    public function __construct()
+    {
+        $action = $_GET['action'] ?? null;
 
-$imagesDir = __DIR__ . '/images';
+        $this->params = (array)json_decode(file_get_contents('php://input'), true);
 
-if (!is_dir($imagesDir) && !mkdir($imagesDir, 0755) && !is_dir($imagesDir)) {
-    echo json_encode([
-        'status' => false,
-    ]);
-
-    exit;
-}
-
-if ($isCancel) {
-    shell_exec('kill $(pgrep scanimage)');
-
-    $logFile = $imagesDir . '/' . $params['logFile'];
-    $imageFile = substr($logFile, 0, -4);
-
-    unlink($logFile);
-    unlink($imageFile);
-
-    echo json_encode([
-        'status' => true,
-    ]);
-
-    exit;
-}
-
-if ($isCheckProgress) {
-    $logFile = $imagesDir . '/' . $params['logFile'];
-    $imageFile = substr($logFile, 0, -4);
-
-    if (!file_exists($logFile)) {
-        echo json_encode([
-            'status' => false,
-        ]);
-
-        exit;
-    }
-
-    clearstatcache(true, $imageFile);
-
-    $file = explode("\r", file_get_contents($logFile));
-
-    $progress = 0.0;
-    foreach ($file as $line) {
-        if (strpos($line, 'Progress') !== false) {
-            $progress = (float)preg_replace('~Progress: (\d+\.?\d*)%[\s\S]*~', '$1', $line);
+        if (array_key_exists('logFile', $this->params)) {
+            $this->logFile = self::IMAGE_DIR . '/' . $this->params['logFile'];
+            $this->imageFile = substr($this->logFile, 0, -4);
         }
-    }
 
-    if ($progress === 100.0 && !file_exists($imageFile)) {
-        $progress -= 0.1;
-    }
+        $result = ['status' => false];
 
-    echo json_encode([
-        'status' => true,
-        'progress' => $progress,
-    ]);
+        if (method_exists($this, $action)) {
+            $result = $this->$action();
+        }
 
-    exit;
-}
-
-if ($isGetImage) {
-    $logFile = $imagesDir . '/' . $params['logFile'];
-    $imageFile = substr($logFile, 0, -4);
-
-    if (!file_exists($imageFile)) {
-        echo json_encode([
-            'status' => false,
-        ]);
+        echo json_encode($result);
 
         exit;
     }
 
-    echo json_encode([
-        'status' => true,
-        'filename' => basename($imageFile),
-        'src' => 'data:' . mime_content_type($imageFile) . ';charset=utf-8;base64,' . base64_encode(file_get_contents($imageFile)),
-    ]);
+    private function clean(): array
+    {
+        if ($this->imageFile !== null && file_exists($this->imageFile)) {
+            unlink($this->imageFile);
+        }
 
-    unlink($logFile);
-    unlink($imageFile);
+        if ($this->logFile !== null && file_exists($this->logFile)) {
+            unlink($this->logFile);
+        }
 
-    exit;
-}
-
-if ($isListDevices) {
-    $shell = 'scanimage -L';
-
-    $output = shell_exec($shell);
-
-    preg_match_all('~[\'`](.+)[\'`] is a (.+)~', $output, $devicesMatches);
-
-    echo json_encode([
-        'status' => true,
-        'command' => $shell,
-        'devices' => array_combine($devicesMatches[1], $devicesMatches[2]),
-    ]);
-
-    exit;
-}
-
-if ($isScan || $isPreview) {
-    $command = [
-        'scanimage' => '',
-        '-v' => '',
-        '--progress' => '',
-        '--depth ' => '8',
-    ];
-
-    if (random_int(0, 3) === 0) {
-        $command['--force-calibration'] = '';
+        return ['status' => true];
     }
 
-    if ($params['device'] !== null) {
-        $command[] = '--device-name=' . $params['device'];
+    private function cancel(): array
+    {
+        shell_exec('kill $(pgrep scanimage)');
+
+        return $this->clean();
     }
 
-    $command['--mode '] = $params['mode'];
-    $command['--source '] = $params['source'];
-    $command['-l '] = $params['left'];
-    $command['-t '] = $params['top'];
-    $command['-x '] = $params['width'];
-    $command['-y '] = $params['height'];
+    private function checkProgress(): array
+    {
+        if ($this->imageFile === null || !file_exists($this->imageFile)) {
+            return ['status' => false];
+        }
 
-    if ($isPreview) {
-        $params['format'] = 'jpeg';
-        $params['resolution'] = 75;
+        clearstatcache(true, $this->imageFile);
+
+        $file = explode("\r", file_get_contents($this->logFile));
+
+        $progress = 0.0;
+        foreach ($file as $line) {
+            if (strpos($line, 'Progress') !== false) {
+                $progress = (float)preg_replace('~Progress: (\d+\.?\d*)%[\s\S]*~', '$1', $line);
+            }
+        }
+
+        if ($progress === 100.0 && !file_exists($this->imageFile)) {
+            $progress -= 0.1;
+        }
+
+        return [
+            'status' => true,
+            'progress' => $progress,
+        ];
     }
 
-    $scanFile = $imagesDir . '/scan_' . date('Y-m-d_H:i:s') . '.' . $params['format'];
-    $logFile = $scanFile . '.log';
+    private function getImage(): array
+    {
+        if ($this->imageFile === null || !file_exists($this->imageFile)) {
+            return ['status' => false];
+        }
 
-    $command['--preview='] = $isScan ? 'no' : 'yes';
-    $command['--format='] = $params['format'];
-    $command['--output-file='] = $scanFile;
-    $command['--resolution '] = $params['resolution'] . 'dpi';
-
-    $shell = '';
-
-    foreach ($command as $key => $value) {
-        $shell .= $key . $value . ' ';
+        return [
+            'status' => true,
+            'filename' => basename($this->imageFile),
+            'src' => 'data:' . mime_content_type($this->imageFile) . ';charset=utf-8;base64,' . base64_encode(file_get_contents($this->imageFile)),
+        ];
     }
 
-    $shell .= ' 1>' . $logFile . ' 2>&1 &';
+    private function copy(): array
+    {
+        if (!file_exists($this->logFile)) {
+            return ['status' => false];
+        }
 
-    shell_exec($shell);
+//        shell_exec('lp ' . $this->imageFile);
 
-    echo json_encode([
-        'status' => true,
-        'command' => $shell,
-        'logFile' => basename($logFile),
-    ]);
+        return ['status' => true];
+    }
 
-    exit;
-}
+    private function listDevices(): array
+    {
+        $scanimageACacheFile = __DIR__ . '/scanimage-A.cache.log';
+        $scanimageLCacheFile = __DIR__ . '/scanimage-L.cache.log';
 
-echo json_encode([
-    'status' => false,
-]);
+        if (array_key_exists('nocache', $_GET) || !file_exists($scanimageACacheFile)) {
+            $shellOutput = shell_exec('scanimage -A');
+            file_put_contents($scanimageACacheFile, $shellOutput);
+        } else {
+            $shellOutput = file_get_contents($scanimageACacheFile);
+        }
+
+        $output = explode(PHP_EOL, $shellOutput);
+
+        $devices = [];
+        $currentDevice = null;
+
+        foreach ($output as $line) {
+            $line = trim($line);
+
+            if (preg_match('~All options specific to device `(.+)\':~', $line, $deviceMatches)) {
+                $currentDevice = $deviceMatches[1];
+            }
+
+            $params = [];
+            $delimiter = ' ';
+            $boolean = false;
+            $range = false;
+            $rangeStep = 0;
+            $default = '';
+            $postfix = '';
+
+            if (strpos($line, '-') === 0) {
+                preg_match('~--?([\w-]+)(.*)~', $line, $matches);
+
+                $flag = $matches[1];
+
+                if (strpos($matches[2], '[=(yes|no)]') === 0) {
+                    // example: --custom-gamma[=(yes|no)] [no]
+
+                    $boolean = true;
+                    $delimiter = '=';
+                    $default = strpos($matches[2], '[yes]') !== false;
+                } elseif (preg_match('~^ ([\d.-]+?)\.\.([\d.-]+).+\[(.+)]~', $matches[2], $rangeMatches)) {
+                    // example: --red-gamma-table 0..65535,... [inactive]
+                    // example: --lamp-off-time 0..60 [15]
+                    // example: --expiration-time -1..30000 (in steps of 1) [60]
+
+                    $params = [$rangeMatches[1], $rangeMatches[2]];
+                    $default = $rangeMatches[3] === 'inactive' ? null : $rangeMatches[3];
+                    $range = true;
+
+                    if (preg_match('~\(in steps of (.+?)\)~', $line, $rangeStepMatches)) {
+                        $rangeStep = $rangeStepMatches[1];
+                    } elseif (strpos($params[0], '.') !== false || strpos($params[1], '.') !== false) {
+                        $rangeStep = 0.1;
+                    } else {
+                        $rangeStep = 1;
+                    }
+
+                    if (preg_match('~^.+(mm|dpi)$~', $params[1], $rangePostfixMatches)) {
+                        $postfix = $rangePostfixMatches[1];
+                        $params[1] = str_replace($postfix, '', $params[1]);
+                    }
+                } elseif (preg_match('~^ ([\S+|]+) \[(.+)]~', $matches[2], $orMatches)) {
+                    // example: --color-filter Red|Green|Blue [Green]
+
+                    $params = explode('|', $orMatches[1]);
+                    $default = $orMatches[2];
+
+                    $lastParamKey = count($params) - 1;
+
+                    if (preg_match('~^.+(mm|dpi)$~', $params[$lastParamKey], $rangePostfixMatches)) {
+                        $postfix = $rangePostfixMatches[1];
+                        $params[$lastParamKey] = str_replace($postfix, '', $params[$lastParamKey]);
+                    }
+                }
+
+                foreach ($params as $index => $param) {
+                    if (!is_numeric($param)) {
+                        continue;
+                    }
+
+                    if ((string)(int)$param === $param) {
+                        $params[$index] = (int)$param;
+                    } else {
+                        $params[$index] = (float)$param;
+                    }
+                }
+
+                $devices[$currentDevice]['params'][$flag] = [
+                    'params' => $params,
+                    'delimiter' => $delimiter,
+                    'boolean' => $boolean,
+                    'range' => $range,
+                    'rangeStep' => $rangeStep,
+                    'default' => $default,
+                    'postfix' => $postfix,
+                ];
+            }
+        }
+
+
+        if (array_key_exists('nocache', $_GET) || !file_exists($scanimageLCacheFile)) {
+            $shellOutput = shell_exec('scanimage -L');
+            file_put_contents($scanimageLCacheFile, $shellOutput);
+        } else {
+            $shellOutput = file_get_contents($scanimageLCacheFile);
+        }
+
+        preg_match_all('~`(.+)\' is a (.+)~', $shellOutput, $devicesMatches);
+
+        foreach ($devicesMatches[1] as $index => $deviceName) {
+            $devices[$deviceName]['name'] = $devicesMatches[2][$index];
+        }
+
+        return [
+            'status' => true,
+            'devices' => $devices,
+        ];
+    }
+
+    private function scan(): array
+    {
+        return $this->scanImage();
+    }
+
+    private function preview(): array
+    {
+        return $this->scanImage(true);
+    }
+
+    private function scanImage(bool $preview = false): array
+    {
+        $command = [
+            'scanimage' => '',
+            '-v' => '',
+            '--progress' => '',
+            '--depth ' => '8',
+        ];
+
+        if (random_int(0, 3) === 0) {
+            $command['--force-calibration'] = '';
+        }
+
+        if ($this->params['device'] !== null) {
+            $command[] = '--device-name=' . $this->params['device'];
+        }
+
+        $command['--mode '] = $this->params['mode'];
+        $command['--source '] = $this->params['source'];
+        $command['-l '] = $this->params['left'];
+        $command['-t '] = $this->params['top'];
+        $command['-x '] = $this->params['width'];
+        $command['-y '] = $this->params['height'];
+
+        if ($preview) {
+            $this->params['format'] = 'jpeg';
+            $this->params['resolution'] = 75;
+        }
+
+        $scanFile = self::IMAGE_DIR . '/scan_' . date('Y-m-d_H:i:s') . '.' . $this->params['format'];
+        $logFile = $scanFile . '.log';
+
+        $command['--preview='] = $preview ? 'yes' : 'no';
+        $command['--format='] = $this->params['format'];
+        $command['--output-file='] = $scanFile;
+        $command['--resolution '] = $this->params['resolution'] . 'dpi';
+
+        $shell = '';
+
+        foreach ($command as $key => $value) {
+            $shell .= $key . $value . ' ';
+        }
+
+        $shell .= ' 1>' . $logFile . ' 2>&1 &';
+
+        shell_exec($shell);
+
+        return [
+            'status' => true,
+            'command' => $shell,
+            'logFile' => basename($logFile),
+        ];
+    }
+};

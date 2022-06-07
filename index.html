@@ -44,12 +44,12 @@
                             </div>
                             <div class="col-6 col-xxl-4">
                                 <select class="form-select" id="device" v-model="params.device">
-                                    <option :value="null" disabled>Устройство по умолчанию</option>
-                                    <option v-for="(name, device) in devices" :value="device">{{ name }}</option>
+                                    <option :value="null" disabled>Устройство не выбрано</option>
+                                    <option v-for="(device, name) in devices" :value="name">{{ device.name }}</option>
                                 </select>
                             </div>
                             <div class="col-6 col-xxl-4">
-                                <button class="btn btn-primary" :disabled="isBusy" @click="listDevices"
+                                <button class="btn btn-primary" :disabled="isBusy" @click="listDevices(true)"
                                         title="Обновить">
                                     <span class="d-block d-sm-none"><i class="fa fa-refresh"></i></span>
                                     <span class="d-none d-sm-block"><i class="fa fa-refresh"></i> Обновить</span>
@@ -58,106 +58,107 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="resolution" class="form-label">Разрешение</label>
-                        <select class="form-select" id="resolution" v-model="params.resolution">
-                            <option v-for="value in resolutions" :value="value">{{ value }}</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="format" class="form-label">Формат</label>
-                        <select class="form-select" id="format" v-model="params.format">
-                            <option v-for="value in formats" :value="value">{{ value }}</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="mode" class="form-label">Режим</label>
-                        <select class="form-select" id="mode" v-model="params.mode">
-                            <option v-for="(value, index) in modes" :value="index">{{ value }}</option>
-                        </select>
-                    </div>
-
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="source" class="form-label">Источник</label>
-                        <select class="form-select" id="source" v-model="params.source">
-                            <option v-for="(value, index) in sources" :value="index">{{ value }}</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="top" class="form-label">Отступ сверху (мм)</label>
-                        <input type="number" class="form-control" min="0" step="0.1" id="top" :max="defaults.height"
-                               v-model="params.top">
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="left" class="form-label">Отступ слева (мм)</label>
-                        <input type="number" class="form-control" min="0" step="0.1" id="left" :max="defaults.width"
-                               v-model="params.left">
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="width" class="form-label">Ширина (мм)</label>
-                        <input type="number" class="form-control" min="0" step="0.1" id="width" :max="defaults.width"
-                               v-model="params.width">
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="height" class="form-label">Высота (мм)</label>
-                        <input type="number" class="form-control" min="0" step="0.1" id="height" :max="defaults.height"
-                               v-model="params.height">
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="brightness" class="form-label">Яркость</label>
-                        <input type="number" class="form-control" min="-100" max="100" step="1"
-                               v-model="params.brightness">
-                        <input type="range" class="form-range" min="-100" max="100" step="1" id="brightness"
-                               v-model="params.brightness">
-                    </div>
-
-                    <div class="col-12 col-lg-6 col-xxl-3">
-                        <label for="contrast" class="form-label">Контрастность</label>
-                        <input type="number" class="form-control" min="-100" max="100" step="1"
-                               v-model="params.contrast">
-                        <input type="range" class="form-range" min="-100" max="100" step="1" id="contrast"
-                               v-model="params.contrast">
-                    </div>
-
-                    <div class="col-12">
-                        <button class="btn btn-danger mt-2" :disabled="!isPreview && !isScan" @click="cancel"
-                                title="Отмена">
-                            <span class="d-block d-sm-none"><i class="fa fa-ban"></i></span>
-                            <span class="d-none d-sm-block"><i class="fa fa-ban"></i> Отмена</span>
-                        </button>
-                        <button class="btn btn-secondary mt-2" @click="setDefault" title="По умолчанию">
-                            <span class="d-block d-sm-none"><i class="fa fa-arrow-rotate-right"></i></span>
-                            <span class="d-none d-sm-block"><i class="fa fa-arrow-rotate-right"></i> По умолчанию</span>
-                        </button>
-                        <button class="btn btn-success mt-2" :disabled="isBusy" @click="preview" title="Предпросмотр">
-                            <span class="d-block d-sm-none"><i class="fa fa-magnifying-glass"></i></span>
-                            <span class="d-none d-sm-block"><i class="fa fa-magnifying-glass"></i> Предпросмотр</span>
-                        </button>
-                        <button class="btn btn-primary mt-2" :disabled="isBusy" @click="scan" title="Сканировать">
-                            <span class="d-block d-sm-none"><i class="fa fa-camera"></i></span>
-                            <span class="d-none d-sm-block"><i class="fa fa-camera"></i> Сканировать</span>
-                        </button>
-                        <button class="btn btn-secondary mt-2" @click="settings" title="Настройки">
-                            <span class="d-block d-sm-none"><i class="fa fa-gears"></i></span>
-                            <span class="d-none d-sm-block"><i class="fa fa-gears"></i> Настройки</span>
-                        </button>
-                    </div>
-
-                    <div class="col-12" v-show="showSettings">
-                        <div class="mb-3 form-check">
-                            <input v-model="saveSettings" type="checkbox" class="form-check-input" id="save_settings">
-                            <label class="form-check-label" for="save_settings">Сохранять настройки сканирования в
-                                браузере</label>
+                    <template v-if="params.device">
+                        <div class="col-12 col-lg-6 col-xxl-3">
+                            <label for="resolution" class="form-label">Разрешение</label>
+                            <select class="form-select" id="resolution" v-model="params.resolution">
+                                <option v-for="value in deviceParams.resolution.params" :value="value">{{ value }}</option>
+                            </select>
                         </div>
-                    </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3">
+                            <label for="format" class="form-label">Формат</label>
+                            <select class="form-select" id="format" v-model="params.format">
+                                <option v-for="value in formats" :value="value">{{ value }}</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.mode">
+                            <label for="mode" class="form-label">Режим</label>
+                            <select class="form-select" id="mode" v-model="params.mode">
+                                <option v-for="value in deviceParams.mode.params" :value="value">{{ value }}</option>
+                            </select>
+                        </div>
+
+
+                        <div class="col-12 col-lg-6 col-xxl-3">
+                            <label for="source" class="form-label">Источник</label>
+                            <select class="form-select" id="source" v-model="params.source">
+                                <option v-for="value in deviceParams.source.params" :value="value">{{ value }}</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.t">
+                            <label for="top" class="form-label">Отступ сверху (мм)</label>
+                            <input type="number" class="form-control" :min="deviceParams.t.params[0]" :step="deviceParams.t.rangeStep" id="top" :max="deviceParams.t.params[1]" v-model="params.top">
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.l">
+                            <label for="left" class="form-label">Отступ слева (мм)</label>
+                            <input type="number" class="form-control" :min="deviceParams.l.params[0]" :step="deviceParams.l.rangeStep" id="left" :max="deviceParams.l.params[1]" v-model="params.left">
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.x">
+                            <label for="width" class="form-label">Ширина (мм)</label>
+                            <input type="number" class="form-control" :min="deviceParams.x.params[0]" :step="deviceParams.x.rangeStep" id="width" :max="deviceParams.x.params[1]" v-model="params.width">
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.y">
+                            <label for="height" class="form-label">Высота (мм)</label>
+                            <input type="number" class="form-control" :min="deviceParams.y.params[0]" :step="deviceParams.y.rangeStep" id="height" :max="deviceParams.y.params[1]" v-model="params.height">
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.brightness">
+                            <label for="brightness" class="form-label">Яркость</label>
+                            <input type="number" class="form-control" :min="deviceParams.brightness.params[0]" :max="deviceParams.brightness.params[1]" :step="deviceParams.brightness.rangeStep" v-model="params.brightness">
+                            <input type="range" class="form-range" :min="deviceParams.brightness.params[0]" :max="deviceParams.brightness.params[1]" :step="deviceParams.brightness.rangeStep" id="brightness" v-model="params.brightness">
+                        </div>
+
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.contrast">
+                            <label for="contrast" class="form-label">Контрастность</label>
+                            <input type="number" class="form-control" :min="deviceParams.contrast.params[0]" :max="deviceParams.contrast.params[1]" :step="deviceParams.contrast.rangeStep" v-model="params.contrast">
+                            <input type="range" class="form-range" :min="deviceParams.contrast.params[0]" :max="deviceParams.contrast.params[1]" :step="deviceParams.contrast.rangeStep" id="contrast" v-model="params.contrast">
+                        </div>
+
+                        <div class="col-12">
+                            <button class="btn btn-danger mt-2" :disabled="!isPreview && !isScan && !isCopy" @click="cancel"
+                                    title="Отмена">
+                                <span class="d-block d-sm-none"><i class="fa fa-ban"></i></span>
+                                <span class="d-none d-sm-block"><i class="fa fa-ban"></i> Отмена</span>
+                            </button>
+                            <button class="btn btn-success mt-2" :disabled="isBusy" @click="preview" title="Предпросмотр">
+                                <span class="d-block d-sm-none"><i class="fa fa-magnifying-glass"></i></span>
+                                <span class="d-none d-sm-block"><i class="fa fa-magnifying-glass"></i> Предпросмотр</span>
+                            </button>
+                            <button class="btn btn-primary mt-2" :disabled="isBusy" @click="scan" title="Сканировать">
+                                <span class="d-block d-sm-none"><i class="fa fa-camera"></i></span>
+                                <span class="d-none d-sm-block"><i class="fa fa-camera"></i> Сканировать</span>
+                            </button>
+<!--                        <button class="btn btn-primary mt-2" :disabled="isBusy" @click="copy" title="Копия">-->
+<!--                            <span class="d-block d-sm-none"><i class="fa fa-print"></i></span>-->
+<!--                            <span class="d-none d-sm-block"><i class="fa fa-print"></i> Копия</span>-->
+<!--                        </button>-->
+                        </div>
+
+                        <div class="col-12">
+                            <button class="btn btn-secondary mt-2" @click="setDefault" title="По умолчанию">
+                                <span class="d-block d-sm-none"><i class="fa fa-arrow-rotate-right"></i></span>
+                                <span class="d-none d-sm-block"><i class="fa fa-arrow-rotate-right"></i> По умолчанию</span>
+                            </button>
+                            <button class="btn btn-secondary mt-2" @click="settings" title="Настройки">
+                                <span class="d-block d-sm-none"><i class="fa fa-gears"></i></span>
+                                <span class="d-none d-sm-block"><i class="fa fa-gears"></i> Настройки</span>
+                            </button>
+                        </div>
+
+                        <div class="col-12" v-show="showSettings">
+                            <div class="mb-3 form-check">
+                                <input v-model="saveSettings" type="checkbox" class="form-check-input" id="save_settings">
+                                <label class="form-check-label" for="save_settings">Сохранять настройки сканирования в
+                                    браузере</label>
+                            </div>
+                        </div>
+                    </template>
 
                     <div class="col-12 d-none d-lg-block">
                         <div class="row">
@@ -215,6 +216,7 @@
             isBusy: false,
             isPreview: false,
             isScan: false,
+            isCopy: false,
 
             logFile: null,
             progress: 0.0,
@@ -222,30 +224,14 @@
             previewSrc: null,
             scans: [],
 
-            devices: [],
-            resolutions: [
-                75,
-                100,
-                150,
-                300,
-                600,
-                1200,
-                2400,
-                4800
-            ],
-            modes: {
-                Gray: 'Черно-белое',
-                Color: 'Цветное'
-            },
+            devices: {},
+
             formats: [
                 'jpeg',
                 'png',
                 'pnm',
                 'tiff'
             ],
-            sources: {
-                Flatbed: 'Планшетный'
-            },
 
             params: {
                 device: null,
@@ -274,6 +260,11 @@
 
             previewNaturalWidth: null,
             previewNaturalHeight: null
+        },
+        computed: {
+            deviceParams() {
+                return this.devices[this.params.device].params;
+            }
         },
         watch: {
             saveSettings(saveSettings) {
@@ -310,17 +301,21 @@
                 }
             }
         },
+        created() {
+            this.listDevices();
+        },
         mounted() {
             this.defaults = Object.assign({}, this.params);
             this.defineParams();
         },
         methods: {
             cancel() {
-                axios.post('/?cancel', { logFile: this.logFile })
+                axios.post('/?action=cancel', { logFile: this.logFile })
                     .then(() => {
                         this.isBusy = false;
                         this.isPreview = false;
                         this.isScan = false;
+                        this.isCopy = false;
                     });
             },
             checkProgress() {
@@ -328,7 +323,7 @@
                     return;
                 }
 
-                axios.post('/?checkProgress', { logFile: this.logFile })
+                axios.post('/?action=checkProgress', { logFile: this.logFile })
                     .then((response) => {
                         if (response.data.status) {
                             this.progress = response.data.progress;
@@ -342,12 +337,12 @@
                     });
             },
             getImage() {
-                axios.post('/?getImage', { logFile: this.logFile })
+                axios.post('/?action=getImage', { logFile: this.logFile })
                     .then((response) => {
                         if (response.data.status) {
                             this.previewSrc = response.data.src;
 
-                            if (this.isScan) {
+                            if (this.isScan || this.isCopy) {
                                 this.scans.push({
                                     filename: response.data.filename,
                                     src: response.data.src
@@ -359,6 +354,7 @@
                         this.isBusy = false;
                         this.isPreview = false;
                         this.isScan = false;
+                        this.isCopy = false;
                     });
             },
             preview() {
@@ -367,7 +363,7 @@
                 this.isPreview = true;
                 this.progress = 0.0;
 
-                axios.post('/?preview', this.params)
+                axios.post('/?action=preview', this.params)
                     .then((response) => {
                         this.logFile = response.data.logFile;
                         this.checkProgress();
@@ -379,16 +375,28 @@
                 this.isScan = true;
                 this.progress = 0.0;
 
-                axios.post('/?scan', this.params)
+                axios.post('/?action=scan', this.params)
                     .then((response) => {
                         this.logFile = response.data.logFile;
                         this.checkProgress();
                     });
             },
-            listDevices() {
+            copy() {
+                this.previewSrc = null;
+                this.isBusy = true;
+                this.isCopy = true;
+                this.progress = 0.0;
+
+                axios.post('/?action=copy', this.params)
+                    .then((response) => {
+                        this.logFile = response.data.logFile;
+                        this.checkProgress();
+                    });
+            },
+            listDevices(noCache = false) {
                 this.isBusy = true;
 
-                axios.post('/?listDevices')
+                axios.post('/?action=listDevices' + (noCache ? '&nocache' : ''))
                     .then((response) => {
                         this.devices = response.data.devices;
 

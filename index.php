@@ -48,10 +48,20 @@ header('Access-Control-Allow-Headers: *');
 new class {
     private const IMAGE_DIR = __DIR__ . '/images';
 
-    private ?string $imageFile = null;
-    private ?string $logFile = null;
+    /**
+     * @var string|null
+     */
+    private $imageFile;
 
-    private array $params;
+    /**
+     * @var string|null
+     */
+    private $logFile;
+
+    /**
+     * @var array
+     */
+    private $params;
 
     public function __construct()
     {

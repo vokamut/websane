@@ -58,11 +58,11 @@
                         </div>
                     </div>
 
-                    <template v-if="params.device">
+                    <template v-if="params.device !== null && deviceFlags !== null">
                         <div class="col-12 col-lg-6 col-xxl-3">
                             <label for="resolution" class="form-label">Разрешение</label>
                             <select class="form-select" id="resolution" v-model="params.resolution">
-                                <option v-for="value in deviceParams.resolution.params" :value="value">{{ value }}</option>
+                                <option v-for="value in deviceFlags.resolution.params" :value="value">{{ value }}</option>
                             </select>
                         </div>
 
@@ -73,10 +73,10 @@
                             </select>
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.mode">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.mode">
                             <label for="mode" class="form-label">Режим</label>
                             <select class="form-select" id="mode" v-model="params.mode">
-                                <option v-for="value in deviceParams.mode.params" :value="value">{{ value }}</option>
+                                <option v-for="(value, index) in deviceFlags.mode.params" :value="index">{{ value }}</option>
                             </select>
                         </div>
 
@@ -84,40 +84,40 @@
                         <div class="col-12 col-lg-6 col-xxl-3">
                             <label for="source" class="form-label">Источник</label>
                             <select class="form-select" id="source" v-model="params.source">
-                                <option v-for="value in deviceParams.source.params" :value="value">{{ value }}</option>
+                                <option v-for="(value, index) in deviceFlags.source.params" :value="index">{{ value }}</option>
                             </select>
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.t">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.t">
                             <label for="top" class="form-label">Отступ сверху (мм)</label>
-                            <input type="number" class="form-control" :min="deviceParams.t.params[0]" :step="deviceParams.t.rangeStep" id="top" :max="deviceParams.t.params[1]" v-model="params.top">
+                            <input type="number" class="form-control" :min="deviceFlags.t.params[0]" :step="deviceFlags.t.rangeStep" id="top" :max="deviceFlags.t.params[1]" v-model="params.top">
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.l">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.l">
                             <label for="left" class="form-label">Отступ слева (мм)</label>
-                            <input type="number" class="form-control" :min="deviceParams.l.params[0]" :step="deviceParams.l.rangeStep" id="left" :max="deviceParams.l.params[1]" v-model="params.left">
+                            <input type="number" class="form-control" :min="deviceFlags.l.params[0]" :step="deviceFlags.l.rangeStep" id="left" :max="deviceFlags.l.params[1]" v-model="params.left">
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.x">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.x">
                             <label for="width" class="form-label">Ширина (мм)</label>
-                            <input type="number" class="form-control" :min="deviceParams.x.params[0]" :step="deviceParams.x.rangeStep" id="width" :max="deviceParams.x.params[1]" v-model="params.width">
+                            <input type="number" class="form-control" :min="deviceFlags.x.params[0]" :step="deviceFlags.x.rangeStep" id="width" :max="deviceFlags.x.params[1]" v-model="params.width">
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.y">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.y">
                             <label for="height" class="form-label">Высота (мм)</label>
-                            <input type="number" class="form-control" :min="deviceParams.y.params[0]" :step="deviceParams.y.rangeStep" id="height" :max="deviceParams.y.params[1]" v-model="params.height">
+                            <input type="number" class="form-control" :min="deviceFlags.y.params[0]" :step="deviceFlags.y.rangeStep" id="height" :max="deviceFlags.y.params[1]" v-model="params.height">
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.brightness">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.brightness">
                             <label for="brightness" class="form-label">Яркость</label>
-                            <input type="number" class="form-control" :min="deviceParams.brightness.params[0]" :max="deviceParams.brightness.params[1]" :step="deviceParams.brightness.rangeStep" v-model="params.brightness">
-                            <input type="range" class="form-range" :min="deviceParams.brightness.params[0]" :max="deviceParams.brightness.params[1]" :step="deviceParams.brightness.rangeStep" id="brightness" v-model="params.brightness">
+                            <input type="number" class="form-control" :min="deviceFlags.brightness.params[0]" :max="deviceFlags.brightness.params[1]" :step="deviceFlags.brightness.rangeStep" v-model="params.brightness">
+                            <input type="range" class="form-range" :min="deviceFlags.brightness.params[0]" :max="deviceFlags.brightness.params[1]" :step="deviceFlags.brightness.rangeStep" id="brightness" v-model="params.brightness">
                         </div>
 
-                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceParams.contrast">
+                        <div class="col-12 col-lg-6 col-xxl-3" v-if="deviceFlags.contrast">
                             <label for="contrast" class="form-label">Контрастность</label>
-                            <input type="number" class="form-control" :min="deviceParams.contrast.params[0]" :max="deviceParams.contrast.params[1]" :step="deviceParams.contrast.rangeStep" v-model="params.contrast">
-                            <input type="range" class="form-range" :min="deviceParams.contrast.params[0]" :max="deviceParams.contrast.params[1]" :step="deviceParams.contrast.rangeStep" id="contrast" v-model="params.contrast">
+                            <input type="number" class="form-control" :min="deviceFlags.contrast.params[0]" :max="deviceFlags.contrast.params[1]" :step="deviceFlags.contrast.rangeStep" v-model="params.contrast">
+                            <input type="range" class="form-range" :min="deviceFlags.contrast.params[0]" :max="deviceFlags.contrast.params[1]" :step="deviceFlags.contrast.rangeStep" id="contrast" v-model="params.contrast">
                         </div>
 
                         <div class="col-12">
@@ -251,7 +251,7 @@
                 source: 'Flatbed'
             },
 
-            defaults: null,
+            defaults: {},
 
             showSettings: false,
             saveSettings: false,
@@ -262,8 +262,8 @@
             previewNaturalHeight: null
         },
         computed: {
-            deviceParams() {
-                return this.devices[this.params.device].params;
+            deviceFlags() {
+                return this.devices[this.params.device] ? this.devices[this.params.device].flags : null;
             }
         },
         watch: {

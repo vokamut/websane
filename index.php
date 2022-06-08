@@ -161,13 +161,13 @@ new class {
         $output = explode(PHP_EOL, $shellOutput);
 
         $devices = [];
-        $currentDevice = null;
+        $deviceLabel = null;
 
         foreach ($output as $line) {
             $line = trim($line);
 
             if (preg_match('~All options specific to device `(.+)\':~', $line, $deviceMatches)) {
-                $currentDevice = $deviceMatches[1];
+                $deviceLabel = $deviceMatches[1];
             }
 
             $params = [];
@@ -210,7 +210,7 @@ new class {
                         $postfix = $rangePostfixMatches[1];
                         $params[1] = str_replace($postfix, '', $params[1]);
                     }
-                } elseif (preg_match('~^ ([\S+|]+) \[(.+)]~', $matches[2], $orMatches)) {
+                } elseif (preg_match('~^ ([\S\s+?|]+) \[(.+)]~', $matches[2], $orMatches)) {
                     // example: --color-filter Red|Green|Blue [Green]
 
                     $params = explode('|', $orMatches[1]);
@@ -236,7 +236,41 @@ new class {
                     }
                 }
 
-                $devices[$currentDevice]['params'][$flag] = [
+                if ($flag === 'mode') {
+                    $newParams = [];
+
+                    foreach ($params as $param) {
+                        if ($param === 'Color') {
+                            $newParams[$param] = 'Цветное';
+                        } elseif ($param === 'Gray') {
+                            $newParams[$param] = 'Черно-белое';
+                        } elseif ($param === 'auto') {
+                            $newParams[$param] = 'Автоматически';
+                        } else {
+                            $newParams[$param] = $param;
+                        }
+                    }
+
+                    $params = $newParams;
+                }
+
+                if ($flag === 'source') {
+                    $newParams = [];
+
+                    foreach ($params as $param) {
+                        if ($param === 'Flatbed') {
+                            $newParams[$param] = 'Планшетный';
+                        } elseif ($param === 'Automatic Document Feeder') {
+                            $newParams[$param] = 'Автоподатчик';
+                        } else {
+                            $newParams[$param] = $param;
+                        }
+                    }
+
+                    $params = $newParams;
+                }
+
+                $devices[$deviceLabel]['flags'][$flag] = [
                     'params' => $params,
                     'delimiter' => $delimiter,
                     'boolean' => $boolean,

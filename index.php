@@ -81,8 +81,6 @@ new class {
         }
 
         echo json_encode($result);
-
-        exit;
     }
 
     private function clean(): array

@@ -309,13 +309,16 @@
             this.defineParams();
         },
         methods: {
+            setNoBusy() {
+                this.isBusy = false;
+                this.isPreview = false;
+                this.isScan = false;
+                this.isCopy = false;
+            },
             cancel() {
                 axios.post('/?action=cancel', { logFile: this.logFile })
                     .then(() => {
-                        this.isBusy = false;
-                        this.isPreview = false;
-                        this.isScan = false;
-                        this.isCopy = false;
+                        this.setNoBusy();
                     });
             },
             checkProgress() {
@@ -351,10 +354,7 @@
                         }
                     })
                     .finally(() => {
-                        this.isBusy = false;
-                        this.isPreview = false;
-                        this.isScan = false;
-                        this.isCopy = false;
+                        this.setNoBusy();
                     });
             },
             preview() {

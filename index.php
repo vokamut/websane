@@ -336,7 +336,7 @@ new class {
         }
 
         if ($this->params['device'] !== null) {
-            $command[] = '--device-name=' . $this->params['device'];
+            $command['--device-name='] = $this->params['device'];
         }
 
         $command['--mode '] = $this->params['mode'];

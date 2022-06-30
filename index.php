@@ -367,6 +367,8 @@ new class {
 
         $shell .= ' 1>' . $logFile . ' 2>&1 &';
 
+        file_put_contents($logFile, '');
+
         shell_exec($shell);
 
         return [

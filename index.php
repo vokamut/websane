@@ -107,11 +107,11 @@ new class {
 
     private function checkProgress(): array
     {
-        if ($this->imageFile === null || !file_exists($this->imageFile)) {
+        if ($this->logFile === null || !file_exists($this->logFile)) {
             return ['status' => false];
         }
 
-        clearstatcache(true, $this->imageFile);
+        clearstatcache(true, $this->logFile);
 
         $file = explode("\r", file_get_contents($this->logFile));
 

@@ -7,14 +7,20 @@
 
 declare(strict_types=1);
 
+gc_enable();
+
 set_error_handler(
     static function (int $number, string $message, string $filename, int $line): void {
+        kill_scanimage();
+
         logger('ERROR: ' . $message . ' | ' . $filename . ':' . $line);
     },
     E_ALL
 );
 
 register_shutdown_function(static function (): void {
+    kill_scanimage();
+
     $error = error_get_last();
     if ($error) {
         logger('SHUTDOWN: ' . $error['message'] . ' | ' . $error['file'] . ':' . $error['line']);
@@ -22,6 +28,8 @@ register_shutdown_function(static function (): void {
 });
 
 set_exception_handler(static function (Throwable $exception): void {
+    kill_scanimage();
+
     logger('EXCEPTION: ' . $exception->getMessage() . ' | ' . $exception->getFile() . ':' . $exception->getLine() . PHP_EOL . $exception->getTraceAsString());
 });
 
@@ -34,6 +42,11 @@ function logger(string $message): void
     );
 }
 
+function kill_scanimage(): void
+{
+    shell_exec('kill $(pgrep scanimage)');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     echo file_get_contents(__DIR__ . '/index.html');
 
@@ -44,6 +57,10 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: *');
 header('Access-Control-Allow-Headers: *');
+
+if (connection_aborted() === 1) {
+    exit;
+}
 
 new class {
     private const IMAGE_DIR = __DIR__ . '/images';
@@ -98,7 +115,7 @@ new class {
 
     private function cancel(): array
     {
-        shell_exec('kill $(pgrep scanimage)');
+        kill_scanimage();
 
         return $this->clean();
     }
@@ -374,3 +391,5 @@ new class {
         ];
     }
 };
+
+gc_collect_cycles();
